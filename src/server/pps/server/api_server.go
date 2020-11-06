@@ -430,8 +430,14 @@ const (
 // authorizePipelineOp checks if the user indicated by 'ctx' is authorized
 // to perform 'operation' on the pipeline in 'info'
 func (a *apiServer) authorizePipelineOp(pachClient *client.APIClient, operation pipelineOperation, input *pps.Input, output string) error {
-	ctx := pachClient.Ctx()
-	me, err := pachClient.WhoAmI(ctx, &auth.WhoAmIRequest{})
+	return a.txnEnv.WithReadContext(pachClient.Ctx(), func(txnCtx *txnenv.TransactionContext) error {
+		return a.authorizePipelineOpInTransaction(txnCtx, operation, input, output)
+	})
+}
+
+// authorizePipelineOpInTransaction is identical to authorizePipelineOp, but runs in the provided transaction
+func (a *apiServer) authorizePipelineOpInTransaction(txnCtx *txnenv.TransactionContext, operation pipelineOperation, input *pps.Input, output string) error {
+	me, err := txnCtx.Client.WhoAmI(txnCtx.ClientContext, &auth.WhoAmIRequest{})
 	if auth.IsErrNotActivated(err) {
 		return nil // Auth isn't activated, skip authorization completely
 	} else if err != nil {
@@ -458,7 +464,7 @@ func (a *apiServer) authorizePipelineOp(pachClient *client.APIClient, operation 
 			}
 			done[repo] = struct{}{}
 			eg.Go(func() error {
-				resp, err := pachClient.Authorize(ctx, &auth.AuthorizeRequest{
+				resp, err := txnCtx.Auth().AuthorizeInTransaction(txnCtx, &auth.AuthorizeRequest{
 					Repo:  repo,
 					Scope: auth.Scope_READER,
 				})
@@ -490,7 +496,9 @@ func (a *apiServer) authorizePipelineOp(pachClient *client.APIClient, operation 
 		var required auth.Scope
 		switch operation {
 		case pipelineOpCreate:
-			if _, err := pachClient.InspectRepo(output); err == nil {
+			if _, err := txnCtx.Pfs().InspectRepoInTransaction(txnCtx, &pfs.InspectRepoRequest{
+				Repo: &pfs.Repo{Name: output},
+			}); err == nil {
 				return errors.Errorf("cannot overwrite repo \"%s\" with new output repo", output)
 			} else if !isNotFoundErr(err) {
 				return err
@@ -500,7 +508,9 @@ func (a *apiServer) authorizePipelineOp(pachClient *client.APIClient, operation 
 		case pipelineOpUpdate:
 			required = auth.Scope_WRITER
 		case pipelineOpDelete:
-			if _, err := pachClient.InspectRepo(output); isNotFoundErr(err) {
+			if _, err := txnCtx.Pfs().InspectRepoInTransaction(txnCtx, &pfs.InspectRepoRequest{
+				Repo: &pfs.Repo{Name: output},
+			}); isNotFoundErr(err) {
 				// special case: the pipeline output repo has been deleted (so the
 				// pipeline is now invalid). It should be possible to delete the pipeline.
 				return nil
@@ -510,7 +520,7 @@ func (a *apiServer) authorizePipelineOp(pachClient *client.APIClient, operation 
 			return errors.Errorf("internal error, unrecognized operation %v", operation)
 		}
 		if required != auth.Scope_NONE {
-			resp, err := pachClient.Authorize(ctx, &auth.AuthorizeRequest{
+			resp, err := txnCtx.Auth().AuthorizeInTransaction(txnCtx, &auth.AuthorizeRequest{
 				Repo:  output,
 				Scope: required,
 			})
