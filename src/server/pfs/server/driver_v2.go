@@ -63,7 +63,7 @@ func newDriverV2(env *serviceenv.ServiceEnv, txnEnv *txnenv.TransactionEnv, etcd
 	if err != nil {
 		return nil, err
 	}
-	tracker := tracker.NewPGTracker(db)
+	tracker := tracker.NewPostgresTracker(db)
 	chunkStorageOpts, err := env.ChunkStorageOptions()
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func newDB() (db *sqlx.DB, retErr error) {
 			db.MustExec(`DROP SCHEMA IF EXISTS storage CASCADE`)
 			fileset.SetupPostgresStore(db)
 			chunk.SetupPostgresStore(db)
-			tracker.PGTrackerApplySchema(db)
+			tracker.PostgresTrackerApplySchema(db)
 		}
 	}()
 	postgresHost, ok := os.LookupEnv("POSTGRES_SERVICE_HOST")

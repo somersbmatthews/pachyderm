@@ -2,12 +2,10 @@ package chunk
 
 import (
 	"context"
-	fmt "fmt"
 	io "io"
 	"io/ioutil"
 	"path"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/pachyderm/pachyderm/src/client/pkg/errors"
@@ -18,39 +16,24 @@ import (
 // Client allows manipulation of individual chunks, by maintaining consistency between
 // a tracker and an obj.Client.
 type Client struct {
-	objc     obj.Client
-	mdstore  MetadataStore
-	tracker  tracker.Tracker
-	chunkSet string
-	ttl      time.Duration
-
-	mu sync.Mutex
-	n  int
-
-	cancel context.CancelFunc
-	err    error
-	done   chan struct{}
+	objc    obj.Client
+	mdstore MetadataStore
+	tracker tracker.Tracker
+	renewer *tracker.Renewer
+	ttl     time.Duration
 }
 
-func NewClient(objc obj.Client, mdstore MetadataStore, tracker tracker.Tracker, chunkSet string) *Client {
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	c := &Client{
-		objc:     objc,
-		tracker:  tracker,
-		mdstore:  mdstore,
-		chunkSet: chunkSet,
-		ttl:      defaultChunkTTL,
-		done:     make(chan struct{}),
-		cancel:   cancel,
-	}
+func NewClient(objc obj.Client, mdstore MetadataStore, tr tracker.Tracker, chunkSet string) *Client {
+	var renewer *tracker.Renewer
 	if chunkSet != "" {
-		go func() {
-			c.err = c.runLoop(ctx)
-			close(c.done)
-		}()
-	} else {
-		close(c.done)
+		renewer = tracker.NewRenewer(tr, chunkSet, defaultChunkTTL)
+	}
+	c := &Client{
+		objc:    objc,
+		tracker: tr,
+		mdstore: mdstore,
+		renewer: renewer,
+		ttl:     defaultChunkTTL,
 	}
 	return c
 }
@@ -72,10 +55,7 @@ func (c *Client) Create(ctx context.Context, md Metadata, r io.Reader) (ID, erro
 			return nil, err
 		}
 	}
-	// create an object whos sole purpose is to reference the chunk we created, and to have a structured name
-	// which can be renewed in bulk by prefix
-	n := c.getInt()
-	if err := c.tracker.CreateObject(ctx, fmt.Sprintf("client-tmp/%s/%d", c.chunkSet, n), []string{chunkOID}, c.ttl); err != nil {
+	if err := c.renewer.Add(ctx, chunkOID); err != nil {
 		return nil, err
 	}
 	// at this point no one will be trying to delete the chunk, because there is an object pointing to it.
@@ -111,31 +91,7 @@ func (c *Client) Get(ctx context.Context, chunkID ID, w io.Writer) error {
 }
 
 func (c *Client) Close() error {
-	c.cancel()
-	<-c.done
-	return c.err
-}
-
-func (c *Client) runLoop(ctx context.Context) error {
-	ticker := time.NewTicker(c.ttl)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-ticker.C:
-			if _, err := c.tracker.SetTTLPrefix(ctx, fmt.Sprintf("client-tmp/%s/", c.chunkSet), c.ttl); err != nil {
-				return err
-			}
-		}
-	}
-}
-
-func (c *Client) getInt() int {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.n++
-	return c.n
+	return c.renewer.Close()
 }
 
 func chunkPath(chunkID ID) string {

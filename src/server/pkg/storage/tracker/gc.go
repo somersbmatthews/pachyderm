@@ -36,12 +36,12 @@ func NewGarbageCollector(tracker Tracker, period time.Duration, deleter Deleter)
 	}
 }
 
-func (GarbageCollector *GarbageCollector) Run(ctx context.Context) error {
-	ticker := time.NewTicker(GarbageCollector.period)
+func (gc *GarbageCollector) Run(ctx context.Context) error {
+	ticker := time.NewTicker(gc.period)
 	defer ticker.Stop()
 	for {
-		ctx, cf := context.WithTimeout(ctx, GarbageCollector.period/2)
-		if err := GarbageCollector.runUntilEmpty(ctx); err != nil {
+		ctx, cf := context.WithTimeout(ctx, gc.period/2)
+		if err := gc.runUntilEmpty(ctx); err != nil {
 			logrus.Error(err)
 		}
 		cf()
@@ -53,9 +53,9 @@ func (GarbageCollector *GarbageCollector) Run(ctx context.Context) error {
 	}
 }
 
-func (GarbageCollector *GarbageCollector) runUntilEmpty(ctx context.Context) error {
+func (gc *GarbageCollector) runUntilEmpty(ctx context.Context) error {
 	for {
-		n, err := GarbageCollector.runOnce(ctx)
+		n, err := gc.runOnce(ctx)
 		if err != nil {
 			return err
 		}
@@ -66,10 +66,10 @@ func (GarbageCollector *GarbageCollector) runUntilEmpty(ctx context.Context) err
 	return nil
 }
 
-func (GarbageCollector *GarbageCollector) runOnce(ctx context.Context) (int, error) {
+func (gc *GarbageCollector) runOnce(ctx context.Context) (int, error) {
 	var n int
-	err := GarbageCollector.tracker.IterateExpired(ctx, func(id string) error {
-		if err := GarbageCollector.deleteObject(ctx, id); err != nil {
+	err := gc.tracker.IterateDeletable(ctx, func(id string) error {
+		if err := gc.deleteObject(ctx, id); err != nil {
 			logrus.Errorf("error deleting object (%s): %v", id, err)
 		} else {
 			n++
@@ -79,14 +79,14 @@ func (GarbageCollector *GarbageCollector) runOnce(ctx context.Context) (int, err
 	return n, err
 }
 
-func (GarbageCollector *GarbageCollector) deleteObject(ctx context.Context, id string) error {
-	if err := GarbageCollector.tracker.MarkTombstone(ctx, id); err != nil {
+func (gc *GarbageCollector) deleteObject(ctx context.Context, id string) error {
+	if err := gc.tracker.MarkTombstone(ctx, id); err != nil {
 		return err
 	}
-	if err := GarbageCollector.deleter.Delete(ctx, id); err != nil {
+	if err := gc.deleter.Delete(ctx, id); err != nil {
 		return err
 	}
-	if err := GarbageCollector.tracker.FinishDelete(ctx, id); err != nil {
+	if err := gc.tracker.FinishDelete(ctx, id); err != nil {
 		return err
 	}
 	return nil

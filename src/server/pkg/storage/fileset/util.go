@@ -7,9 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/pachyderm/pachyderm/src/server/pkg/dbutil"
-	"github.com/pachyderm/pachyderm/src/server/pkg/obj"
 	"github.com/pachyderm/pachyderm/src/server/pkg/storage/chunk"
 	"github.com/pachyderm/pachyderm/src/server/pkg/storage/fileset/index"
 	"github.com/pachyderm/pachyderm/src/server/pkg/storage/tracker"
@@ -18,17 +16,12 @@ import (
 
 // WithTestStorage constructs a local storage instance for testing during the lifetime of
 // the callback.
-func WithTestStorage(t testing.TB, f func(*Storage) error) {
-	dbutil.WithTestDB(t, func(db *sqlx.DB) {
-		chunk.SetupPostgresStore(db)
-		tracker.PGTrackerApplySchema(db)
-		SetupPostgresStore(db)
-		tr := tracker.NewPGTracker(db)
-		obj.WithLocalClient(func(objC obj.Client) error {
-			chunkStorage := chunk.NewStorage(objC, chunk.NewPostgresStore(db), tr)
-			return f(NewStorage(NewPostgresStore(db), tr, chunkStorage))
-		})
-	})
+func NewTestStorage(t testing.TB) *Storage {
+	db := dbutil.NewTestDB(t)
+	tr := tracker.NewTestTracker(t, db)
+	_, chunks := chunk.NewTestStorage(t, db, tr)
+	store := NewTestStore(t, db)
+	return NewStorage(store, tr, chunks)
 }
 
 // CopyFiles copies files from a file set to a file set writer.

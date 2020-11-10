@@ -30,6 +30,7 @@ type Tracker interface {
 
 	// SetTTLPrefix sets the expiration time to current_time + ttl for all objects with ids starting with prefix
 	SetTTLPrefix(ctx context.Context, prefix string, ttl time.Duration) (time.Time, error)
+
 	// TODO: thoughts on these?
 	// SetTTL(ctx context.Context, id string, ttl time.Duration) error
 	// SetTTLBatch(ctx context.Context, ids []string, ttl time.Duration) error
@@ -50,12 +51,12 @@ type Tracker interface {
 	// It is an error to call DeleteObject without calling MarkTombstone.
 	FinishDelete(ctx context.Context, id string) error
 
-	// IterateExpired calls cb with all the objects which have expired or are tombstones.
-	IterateExpired(ctx context.Context, cb func(id string) error) error
+	// IterateDeletable calls cb with all the objects which have expired or are tombstones.
+	IterateDeletable(ctx context.Context, cb func(id string) error) error
 }
 
 // TestTracker runs a TestSuite to ensure Tracker is properly implemented
-func TestTracker(t *testing.T, withTracker func(func(Tracker))) {
+func TestTracker(t *testing.T, newTracker func(testing.TB) Tracker) {
 	ctx := context.Background()
 	type test struct {
 		Name string
@@ -122,7 +123,7 @@ func TestTracker(t *testing.T, withTracker func(func(Tracker))) {
 				time.Sleep(time.Millisecond)
 
 				var toExpire []string
-				tracker.IterateExpired(ctx, func(id string) error {
+				tracker.IterateDeletable(ctx, func(id string) error {
 					toExpire = append(toExpire, id)
 					return nil
 				})
@@ -132,16 +133,14 @@ func TestTracker(t *testing.T, withTracker func(func(Tracker))) {
 	}
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			withTracker(func(tracker Tracker) {
-				test.F(t, tracker)
-			})
+			tr := newTracker(t)
+			test.F(t, tr)
 		})
 	}
 }
 
-func WithTestTracker(t testing.TB, db *sqlx.DB, cb func(tracker Tracker)) {
+func NewTestTracker(t testing.TB, db *sqlx.DB) Tracker {
 	db.MustExec("CREATE SCHEMA storage")
 	db.MustExec(schema)
-	tr := NewPGTracker(db)
-	cb(tr)
+	return NewPostgresTracker(db)
 }

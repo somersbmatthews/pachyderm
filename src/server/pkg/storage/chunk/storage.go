@@ -6,7 +6,6 @@ import (
 
 	"github.com/pachyderm/pachyderm/src/server/pkg/obj"
 	"github.com/pachyderm/pachyderm/src/server/pkg/storage/tracker"
-	"github.com/pachyderm/pachyderm/src/server/pkg/uuid"
 )
 
 const (
@@ -55,11 +54,6 @@ func (s *Storage) NewWriter(ctx context.Context, tmpID string, cb WriterCallback
 // List lists all of the chunks in object storage.
 func (s *Storage) List(ctx context.Context, cb func(string) error) error {
 	return s.objClient.Walk(ctx, prefix, cb)
-}
-
-// NewClient returns a Client for direct chunk manipulation
-func (s *Storage) NewClient() *Client {
-	return NewClient(s.objClient, s.mdstore, s.tracker, "client-"+uuid.NewWithoutDashes())
 }
 
 // NewDeleter creates a deleter for use with a tracker.GC

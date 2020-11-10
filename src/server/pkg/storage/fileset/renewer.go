@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pachyderm/pachyderm/src/client/pkg/errors"
+	"github.com/pachyderm/pachyderm/src/server/pkg/storage/renewing"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -29,50 +29,32 @@ func WithRenewer(ctx context.Context, ttl time.Duration, renew renewFunc, cb fun
 
 // Renewer manages renewing the TTL on a set of paths.
 type Renewer struct {
-	ttl   time.Duration
 	renew renewFunc
 	mu    sync.Mutex
 	paths map[string]struct{}
+	r     *renewing.VeryGenericRenewer
 }
 
 func newRenewer(ttl time.Duration, renew renewFunc) *Renewer {
-	return &Renewer{
-		ttl:   ttl,
-		renew: renew,
+	r := &Renewer{
 		paths: make(map[string]struct{}),
 	}
-}
-
-// run runs the renewer until the context is canceled.
-func (r *Renewer) run(ctx context.Context) (retErr error) {
-	defer func() {
-		if errors.Is(ctx.Err(), context.Canceled) {
-			retErr = nil
-		}
-	}()
-	ticker := time.NewTicker(r.ttl / 2)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-ticker.C:
-			if err := r.renewPaths(ctx); err != nil {
+	r.r = renewing.NewVeryGenericRenewer(ttl, func(ctx context.Context, ttl time.Duration) error {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		for p := range r.paths {
+			if err := r.renew(ctx, p, ttl); err != nil {
 				return err
 			}
 		}
-	}
+		return nil
+	})
+	return r
 }
 
-func (r *Renewer) renewPaths(ctx context.Context) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	for p := range r.paths {
-		if err := r.renew(ctx, p, r.ttl); err != nil {
-			return err
-		}
-	}
-	return nil
+func (r *Renewer) run(ctx context.Context) error {
+	<-ctx.Done()
+	return r.r.Close()
 }
 
 // Add adds p to the path set.

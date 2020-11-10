@@ -18,24 +18,26 @@ const (
 	TestPostgresUser    = "postgres"
 )
 
-// WithTestDB connects to postgres using the default settings, creates a database with a unique name
+// NewTestDB connects to postgres using the default settings, creates a database with a unique name
 // then calls cb with a sqlx.DB configured to use the newly created database.
 // After cb returns the database is dropped.
-func WithTestDB(t testing.TB, cb func(db *sqlx.DB)) {
+func NewTestDB(t testing.TB) *sqlx.DB {
 	dsn := fmt.Sprintf("host=%s port=%d user=%s sslmode=disable", DefaultPostgresHost, DefaultPostgresPort, TestPostgresUser)
 	db := sqlx.MustOpen("postgres", dsn)
 	dbName := fmt.Sprintf("test_%d", time.Now().UnixNano())
 	db.MustExec("CREATE DATABASE " + dbName)
 	t.Log("database", dbName, "successfully created")
-	defer func() {
+	t.Cleanup(func() {
 		if !devDontDropDatabase {
 			db.MustExec("DROP DATABASE " + dbName)
 		}
-		require.Nil(t, db.Close())
-	}()
+		require.NoError(t, db.Close())
+	})
 	db2 := sqlx.MustOpen("postgres", dsn+" dbname="+dbName)
-	cb(db2)
-	require.Nil(t, db2.Close())
+	t.Cleanup(func() {
+		require.NoError(t, db2.Close())
+	})
+	return db2
 }
 
 type DBParams struct {

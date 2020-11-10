@@ -2,15 +2,34 @@ package obj
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
+	"testing"
+
+	"github.com/pachyderm/pachyderm/src/client/pkg/require"
 )
+
+// NewTestClient creates a Client which is cleaned up after the test exists
+func NewTestClient(t testing.TB) Client {
+	dirBase := path.Join(os.TempDir(), "pachyderm_test")
+	require.NoError(t, os.MkdirAll(dirBase, 0700))
+	dir, err := ioutil.TempDir(dirBase, "")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(dir))
+	})
+	objC, err := NewLocalClient(dir)
+	require.Nil(t, err)
+	return objC
+}
 
 // WithLocalClient constructs a local object storage client for testing during the lifetime of
 // the callback.
 func WithLocalClient(f func(objC Client) error) (retErr error) {
+	fmt.Println("WithLocalClient implements a pattern deprecated since go 1.14. consider switching to NewTestClient")
 	dirBase := path.Join(os.TempDir(), "pachyderm_test")
 	if err := os.MkdirAll(dirBase, 0700); err != nil {
 		return err

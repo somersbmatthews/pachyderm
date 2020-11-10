@@ -5,24 +5,19 @@ import (
 	"testing"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/pachyderm/pachyderm/src/client/pkg/require"
-	"github.com/pachyderm/pachyderm/src/server/pkg/dbutil"
 	"github.com/pachyderm/pachyderm/src/server/pkg/obj"
 	"github.com/pachyderm/pachyderm/src/server/pkg/storage/tracker"
 )
 
-// WithLocalStorage creates a local storage instance for testing during the lifetime of
+// NewTestStorage creates a local storage instance for testing during the lifetime of
 // the callback.
-func WithTestStorage(t testing.TB, f func(obj.Client, *Storage) error, opts ...StorageOption) {
-	dbutil.WithTestDB(t, func(db *sqlx.DB) {
-		tracker.WithTestTracker(t, db, func(tracker tracker.Tracker) {
-			db.MustExec(schema)
-			mdstore := NewPostgresStore(db)
-			require.NoError(t, obj.WithLocalClient(func(objClient obj.Client) error {
-				return f(objClient, NewStorage(objClient, mdstore, tracker, opts...))
-			}))
-		})
-	})
+func NewTestStorage(t testing.TB, db *sqlx.DB, tr tracker.Tracker, opts ...StorageOption) (obj.Client, *Storage) {
+	// metadata store
+	db.MustExec(schema)
+	mdstore := NewPostgresStore(db)
+	// object client
+	objC := obj.NewTestClient(t)
+	return objC, NewStorage(objC, mdstore, tr, opts...)
 }
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")

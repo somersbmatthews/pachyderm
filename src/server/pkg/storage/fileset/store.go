@@ -24,26 +24,24 @@ type Store interface {
 	Walk(ctx context.Context, prefix string, cb func(string) error) error
 }
 
-func StoreTestSuite(t *testing.T, withStore func(func(Store))) {
+func StoreTestSuite(t *testing.T, newStore func(t testing.TB) Store) {
 	ctx := context.Background()
 	t.Run("PutGet", func(t *testing.T) {
-		withStore(func(x Store) {
-			idx := &index.Index{}
-			require.NoError(t, x.PutIndex(ctx, "test", idx))
-			actual, err := x.GetIndex(ctx, "test")
-			require.NoError(t, err)
-			require.Equal(t, idx, actual)
-		})
+		x := newStore(t)
+		idx := &index.Index{}
+		require.NoError(t, x.PutIndex(ctx, "test", idx))
+		actual, err := x.GetIndex(ctx, "test")
+		require.NoError(t, err)
+		require.Equal(t, idx, actual)
 	})
 	t.Run("Delete", func(t *testing.T) {
-		withStore(func(x Store) {
-			require.NoError(t, x.Delete(ctx, "keys that don't exist should not cause delete to error"))
-			idx := &index.Index{}
-			require.NoError(t, x.PutIndex(ctx, "test", idx))
-			require.NoError(t, x.Delete(ctx, "test"))
-			_, err := x.GetIndex(ctx, "test")
-			require.Equal(t, ErrPathNotExists, err)
-		})
+		x := newStore(t)
+		require.NoError(t, x.Delete(ctx, "keys that don't exist should not cause delete to error"))
+		idx := &index.Index{}
+		require.NoError(t, x.PutIndex(ctx, "test", idx))
+		require.NoError(t, x.Delete(ctx, "test"))
+		_, err := x.GetIndex(ctx, "test")
+		require.Equal(t, ErrPathNotExists, err)
 	})
 }
 

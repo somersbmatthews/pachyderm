@@ -8,7 +8,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/jmoiron/sqlx"
-	"github.com/pachyderm/pachyderm/src/server/pkg/dbutil"
 	"github.com/pachyderm/pachyderm/src/server/pkg/errutil"
 	"github.com/pachyderm/pachyderm/src/server/pkg/storage/fileset/index"
 )
@@ -100,10 +99,7 @@ func SetupPostgresStore(db *sqlx.DB) {
 	db.MustExec(schema)
 }
 
-func WithTestStore(t testing.TB, cb func(Store)) {
-	dbutil.WithTestDB(t, func(db *sqlx.DB) {
-		SetupPostgresStore(db)
-		s := NewPostgresStore(db)
-		cb(s)
-	})
+func NewTestStore(t testing.TB, db *sqlx.DB) Store {
+	SetupPostgresStore(db)
+	return NewPostgresStore(db)
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/pachyderm/pachyderm/src/server/pkg/storage/chunk"
 	"github.com/pachyderm/pachyderm/src/server/pkg/storage/fileset/index"
 	"github.com/pachyderm/pachyderm/src/server/pkg/storage/tracker"
-	"github.com/pachyderm/pachyderm/src/server/pkg/uuid"
 )
 
 // FileWriter provides functionality for writing a file.
@@ -79,7 +78,6 @@ type Writer struct {
 }
 
 func newWriter(ctx context.Context, store Store, tracker tracker.Tracker, chunks *chunk.Storage, path string, opts ...WriterOption) *Writer {
-	uuidStr := uuid.NewWithoutDashes()
 	w := &Writer{
 		ctx:     ctx,
 		store:   store,
@@ -93,8 +91,8 @@ func newWriter(ctx context.Context, store Store, tracker tracker.Tracker, chunks
 	if w.noUpload {
 		chunkWriterOpts = append(chunkWriterOpts, chunk.WithNoUpload())
 	}
-	w.iw = index.NewWriter(ctx, chunks, "index-writer-"+uuidStr)
-	w.cw = chunks.NewWriter(ctx, "chunk-writer-"+uuidStr, w.callback, chunkWriterOpts...)
+	w.iw = index.NewWriter(ctx, chunks, "index-writer")
+	w.cw = chunks.NewWriter(ctx, "chunk-writer", w.callback, chunkWriterOpts...)
 	return w
 }
 
