@@ -12,7 +12,8 @@ import (
 	"github.com/pachyderm/pachyderm/src/client/pkg/errors"
 	"github.com/pachyderm/pachyderm/src/server/pkg/storage/chunk"
 	"github.com/pachyderm/pachyderm/src/server/pkg/storage/fileset/index"
-	"github.com/pachyderm/pachyderm/src/server/pkg/storage/tracker"
+	"github.com/pachyderm/pachyderm/src/server/pkg/storage/renew"
+	"github.com/pachyderm/pachyderm/src/server/pkg/storage/track"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -49,7 +50,7 @@ var (
 
 // Storage is the abstraction that manages fileset storage.
 type Storage struct {
-	tracker                      tracker.Tracker
+	tracker                      track.Tracker
 	store                        Store
 	chunks                       *chunk.Storage
 	memThreshold, shardThreshold int64
@@ -59,7 +60,7 @@ type Storage struct {
 }
 
 // NewStorage creates a new Storage.
-func NewStorage(store Store, tr tracker.Tracker, chunks *chunk.Storage, opts ...StorageOption) *Storage {
+func NewStorage(store Store, tr track.Tracker, chunks *chunk.Storage, opts ...StorageOption) *Storage {
 	s := &Storage{
 		store:          store,
 		tracker:        tr,
@@ -323,12 +324,12 @@ func (s *Storage) SetTTL(ctx context.Context, p string, ttl time.Duration) (time
 }
 
 // WithRenewer calls cb with a Renewer, and a context which will be canceled if the renewer is unable to renew a path.
-func (s *Storage) WithRenewer(ctx context.Context, ttl time.Duration, cb func(context.Context, *Renewer) error) error {
-	renew := func(ctx context.Context, p string, ttl time.Duration) error {
+func (s *Storage) WithRenewer(ctx context.Context, ttl time.Duration, cb func(context.Context, *renew.StringSet) error) error {
+	rf := func(ctx context.Context, p string, ttl time.Duration) error {
 		_, err := s.SetTTL(ctx, p, ttl)
 		return err
 	}
-	return WithRenewer(ctx, ttl, renew, cb)
+	return renew.WithStringSet(ctx, ttl, rf, cb)
 }
 
 func (s *Storage) GC(ctx context.Context) error {
@@ -337,7 +338,7 @@ func (s *Storage) GC(ctx context.Context) error {
 	filesetDeleter := &deleter{
 		store: s.store,
 	}
-	mux := tracker.DeleterMux(func(id string) tracker.Deleter {
+	mux := track.DeleterMux(func(id string) track.Deleter {
 		switch {
 		case strings.HasPrefix(id, "chunk/"):
 			return chunkDeleter
@@ -347,7 +348,7 @@ func (s *Storage) GC(ctx context.Context) error {
 			return nil
 		}
 	})
-	gc := tracker.NewGarbageCollector(s.tracker, period, mux)
+	gc := track.NewGarbageCollector(s.tracker, period, mux)
 	return gc.Run(ctx)
 }
 
@@ -377,7 +378,7 @@ func filesetObjectID(p string) string {
 	return "fileset/" + p
 }
 
-var _ tracker.Deleter = &deleter{}
+var _ track.Deleter = &deleter{}
 
 type deleter struct {
 	store Store

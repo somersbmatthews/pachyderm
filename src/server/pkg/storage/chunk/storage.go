@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/pachyderm/pachyderm/src/server/pkg/obj"
-	"github.com/pachyderm/pachyderm/src/server/pkg/storage/tracker"
+	"github.com/pachyderm/pachyderm/src/server/pkg/storage/track"
 )
 
 const (
@@ -16,14 +16,14 @@ const (
 // Storage is the abstraction that manages chunk storage.
 type Storage struct {
 	objClient obj.Client
-	tracker   tracker.Tracker
+	tracker   track.Tracker
 	mdstore   MetadataStore
 
 	defaultChunkTTL time.Duration
 }
 
 // NewStorage creates a new Storage.
-func NewStorage(objClient obj.Client, mdstore MetadataStore, tracker tracker.Tracker, opts ...StorageOption) *Storage {
+func NewStorage(objClient obj.Client, mdstore MetadataStore, tracker track.Tracker, opts ...StorageOption) *Storage {
 	s := &Storage{
 		objClient:       objClient,
 		mdstore:         mdstore,
@@ -57,7 +57,7 @@ func (s *Storage) List(ctx context.Context, cb func(string) error) error {
 }
 
 // NewDeleter creates a deleter for use with a tracker.GC
-func (s *Storage) NewDeleter() tracker.Deleter {
+func (s *Storage) NewDeleter() track.Deleter {
 	return &deleter{
 		mdstore: s.mdstore,
 		objc:    s.objClient,

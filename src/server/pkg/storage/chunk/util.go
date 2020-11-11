@@ -6,12 +6,12 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pachyderm/pachyderm/src/server/pkg/obj"
-	"github.com/pachyderm/pachyderm/src/server/pkg/storage/tracker"
+	"github.com/pachyderm/pachyderm/src/server/pkg/storage/track"
 )
 
 // NewTestStorage creates a local storage instance for testing during the lifetime of
 // the callback.
-func NewTestStorage(t testing.TB, db *sqlx.DB, tr tracker.Tracker, opts ...StorageOption) (obj.Client, *Storage) {
+func NewTestStorage(t testing.TB, db *sqlx.DB, tr track.Tracker, opts ...StorageOption) (obj.Client, *Storage) {
 	// metadata store
 	db.MustExec(schema)
 	mdstore := NewPostgresStore(db)

@@ -1,4 +1,4 @@
-package tracker
+package track
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pachyderm/pachyderm/src/server/pkg/storage/renewing"
+	"github.com/pachyderm/pachyderm/src/server/pkg/storage/renew"
 	"github.com/pachyderm/pachyderm/src/server/pkg/uuid"
 )
 
@@ -14,7 +14,7 @@ type Renewer struct {
 	id      string
 	tracker Tracker
 	ttl     time.Duration
-	r       *renewing.VeryGenericRenewer
+	r       *renew.Renewer
 
 	mu sync.Mutex
 	n  int
@@ -26,7 +26,7 @@ func NewRenewer(tracker Tracker, name string, ttl time.Duration) *Renewer {
 		tracker: tracker,
 		ttl:     ttl,
 	}
-	r.r = renewing.NewVeryGenericRenewer(ttl, func(ctx context.Context, ttl time.Duration) error {
+	r.r = renew.NewRenewer(ttl, func(ctx context.Context, ttl time.Duration) error {
 		_, err := r.tracker.SetTTLPrefix(ctx, r.id+"/", ttl)
 		return err
 	})

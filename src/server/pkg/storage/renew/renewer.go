@@ -1,4 +1,4 @@
-package renewing
+package renew
 
 import (
 	"context"
@@ -8,32 +8,41 @@ import (
 
 type RenewFunc func(ctx context.Context, ttl time.Duration) error
 
-type VeryGenericRenewer struct {
+type Renewer struct {
 	renewFunc RenewFunc
 	ttl       time.Duration
 
+	ctx    context.Context
 	cancel context.CancelFunc
 	done   chan struct{}
 	err    error
 }
 
-func NewVeryGenericRenewer(ttl time.Duration, renewFunc RenewFunc) *VeryGenericRenewer {
+func NewRenewer(ttl time.Duration, renewFunc RenewFunc) *Renewer {
 	ctx, cancel := context.WithCancel(context.Background())
-	r := &VeryGenericRenewer{
+	r := &Renewer{
 		renewFunc: renewFunc,
 		ttl:       ttl,
 
+		ctx:    ctx,
 		cancel: cancel,
 		done:   make(chan struct{}),
 	}
 	go func() {
 		r.err = r.renewLoop(ctx)
+		r.cancel()
 		close(r.done)
 	}()
 	return r
 }
 
-func (r *VeryGenericRenewer) IsClosed() bool {
+// Context returns a context which will be cancelled when the renewer is closed
+func (r *Renewer) Context() context.Context {
+	return r.ctx
+}
+
+// IsClosed returns true if the renewer is closed
+func (r *Renewer) IsClosed() bool {
 	select {
 	case <-r.done:
 		return true
@@ -42,13 +51,14 @@ func (r *VeryGenericRenewer) IsClosed() bool {
 	}
 }
 
-func (r *VeryGenericRenewer) Close() error {
+// Close closes the renewer, stopping the background renewal. Close is idempotent.
+func (r *Renewer) Close() error {
 	r.cancel()
 	<-r.done
 	return r.err
 }
 
-func (r *VeryGenericRenewer) renewLoop(ctx context.Context) (retErr error) {
+func (r *Renewer) renewLoop(ctx context.Context) (retErr error) {
 	defer func() {
 		if errors.Is(ctx.Err(), context.Canceled) {
 			retErr = nil

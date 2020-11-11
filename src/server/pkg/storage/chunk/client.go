@@ -10,7 +10,7 @@ import (
 
 	"github.com/pachyderm/pachyderm/src/client/pkg/errors"
 	"github.com/pachyderm/pachyderm/src/server/pkg/obj"
-	"github.com/pachyderm/pachyderm/src/server/pkg/storage/tracker"
+	"github.com/pachyderm/pachyderm/src/server/pkg/storage/track"
 )
 
 // Client allows manipulation of individual chunks, by maintaining consistency between
@@ -18,15 +18,15 @@ import (
 type Client struct {
 	objc    obj.Client
 	mdstore MetadataStore
-	tracker tracker.Tracker
-	renewer *tracker.Renewer
+	tracker track.Tracker
+	renewer *track.Renewer
 	ttl     time.Duration
 }
 
-func NewClient(objc obj.Client, mdstore MetadataStore, tr tracker.Tracker, chunkSet string) *Client {
-	var renewer *tracker.Renewer
+func NewClient(objc obj.Client, mdstore MetadataStore, tr track.Tracker, chunkSet string) *Client {
+	var renewer *track.Renewer
 	if chunkSet != "" {
-		renewer = tracker.NewRenewer(tr, chunkSet, defaultChunkTTL)
+		renewer = track.NewRenewer(tr, chunkSet, defaultChunkTTL)
 	}
 	c := &Client{
 		objc:    objc,
@@ -51,7 +51,7 @@ func (c *Client) Create(ctx context.Context, md Metadata, r io.Reader) (ID, erro
 	// TODO: retry on ErrTombstone
 	chunkOID := ChunkObjectID(chunkID)
 	if err := c.tracker.CreateObject(ctx, chunkOID, pointsTo, c.ttl); err != nil {
-		if err != tracker.ErrObjectExists {
+		if err != track.ErrObjectExists {
 			return nil, err
 		}
 	}
@@ -105,7 +105,7 @@ func ChunkObjectID(chunkID ID) string {
 	return "chunk/" + chunkID.HexString()
 }
 
-var _ tracker.Deleter = &deleter{}
+var _ track.Deleter = &deleter{}
 
 type deleter struct {
 	mdstore MetadataStore

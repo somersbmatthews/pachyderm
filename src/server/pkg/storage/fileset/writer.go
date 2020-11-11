@@ -7,7 +7,7 @@ import (
 	"github.com/pachyderm/pachyderm/src/client/pkg/errors"
 	"github.com/pachyderm/pachyderm/src/server/pkg/storage/chunk"
 	"github.com/pachyderm/pachyderm/src/server/pkg/storage/fileset/index"
-	"github.com/pachyderm/pachyderm/src/server/pkg/storage/tracker"
+	"github.com/pachyderm/pachyderm/src/server/pkg/storage/track"
 )
 
 // FileWriter provides functionality for writing a file.
@@ -65,7 +65,7 @@ func (fw *FileWriter) Write(data []byte) (int, error) {
 // Writer provides functionality for writing a file set.
 type Writer struct {
 	ctx       context.Context
-	tracker   tracker.Tracker
+	tracker   track.Tracker
 	store     Store
 	path      string
 	iw        *index.Writer
@@ -77,7 +77,7 @@ type Writer struct {
 	ttl       time.Duration
 }
 
-func newWriter(ctx context.Context, store Store, tracker tracker.Tracker, chunks *chunk.Storage, path string, opts ...WriterOption) *Writer {
+func newWriter(ctx context.Context, store Store, tracker track.Tracker, chunks *chunk.Storage, path string, opts ...WriterOption) *Writer {
 	w := &Writer{
 		ctx:     ctx,
 		store:   store,
