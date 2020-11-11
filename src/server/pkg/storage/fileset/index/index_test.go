@@ -8,7 +8,7 @@ import (
 	"github.com/pachyderm/pachyderm/src/client/pkg/require"
 	"github.com/pachyderm/pachyderm/src/server/pkg/dbutil"
 	"github.com/pachyderm/pachyderm/src/server/pkg/storage/chunk"
-	"github.com/pachyderm/pachyderm/src/server/pkg/storage/tracker"
+	"github.com/pachyderm/pachyderm/src/server/pkg/storage/track"
 	"github.com/pachyderm/pachyderm/src/server/pkg/uuid"
 )
 
@@ -59,7 +59,7 @@ func pathRange(fileNames []string) *PathRange {
 
 func Check(t *testing.T, permString string) {
 	db := dbutil.NewTestDB(t)
-	tr := tracker.NewTestTracker(t, db)
+	tr := track.NewTestTracker(t, db)
 	_, chunks := chunk.NewTestStorage(t, db, tr)
 	fileNames := Generate(permString)
 	averageBits = 12

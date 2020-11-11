@@ -12,7 +12,7 @@ import (
 	"github.com/pachyderm/pachyderm/src/client/pkg/require"
 	"github.com/pachyderm/pachyderm/src/server/pkg/dbutil"
 	"github.com/pachyderm/pachyderm/src/server/pkg/obj"
-	"github.com/pachyderm/pachyderm/src/server/pkg/storage/tracker"
+	"github.com/pachyderm/pachyderm/src/server/pkg/storage/track"
 	"github.com/pachyderm/pachyderm/src/server/pkg/testutil/random"
 	"github.com/pachyderm/pachyderm/src/server/pkg/uuid"
 	"modernc.org/mathutil"
@@ -197,6 +197,6 @@ func readAnnotations(t *testing.T, chunks *Storage, annotations []*testAnnotatio
 // it is for testing this package, not for reuse.
 func newTestStorage(t testing.TB) (obj.Client, *Storage) {
 	db := dbutil.NewTestDB(t)
-	tr := tracker.NewTestTracker(t, db)
+	tr := track.NewTestTracker(t, db)
 	return NewTestStorage(t, db, tr)
 }
