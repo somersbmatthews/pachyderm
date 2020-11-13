@@ -18,6 +18,8 @@ set -ex
 # time out, give up. If we succeed, stash that code in a docker image which
 # later tests can use to get it back.
 
+echo "THIS IS GOPATH"
+echo $GOPATH
 cd /home/travis/gopath/src/github.com/pachyderm/pachyderm
 
 if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
