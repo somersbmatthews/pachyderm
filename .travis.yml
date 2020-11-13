@@ -12,6 +12,9 @@ cache:
 language: go
 go:
   - "1.15.2"
+branches:
+  only:
+  - travis-gopath-fix
 env:
   global:
     - PATH="${HOME}/cached-deps:$(python3 -c 'import site; print(site.USER_BASE)')/bin:${PATH}"
