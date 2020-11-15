@@ -23,7 +23,7 @@ cd ${GOPATH}/src
 ls
 cd github.com
 ls
-cd ${GOPATH}/src/github.com/pachyderm/pachyderm
+cd ${GOPATH}/src/github.com/somersbmatthews/pachyderm
 
 if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
     # These shenannigans not needed for release and branch builds, hopefully.
