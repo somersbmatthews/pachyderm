@@ -17,8 +17,10 @@ set -ex
 # So, try a few times to fetch and identify a valid version of the code. If we
 # time out, give up. If we succeed, stash that code in a docker image which
 # later tests can use to get it back.
-
-go get github.com/pachyderm/pachyderm
+echo "This is GOPATH"
+echo ${GOPATH}
+cd ${GOPATH}/src
+ls
 
 cd ${GOPATH}/src/github.com/pachyderm/pachyderm
 
