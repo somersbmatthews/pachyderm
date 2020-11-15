@@ -21,7 +21,10 @@ echo "This is GOPATH"
 echo ${GOPATH}
 cd ${GOPATH}/src
 ls
-
+cd github.com
+ls
+cd pachyderm
+ls
 cd ${GOPATH}/src/github.com/pachyderm/pachyderm
 
 if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
