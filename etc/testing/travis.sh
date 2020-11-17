@@ -47,6 +47,7 @@ if [[ "$TRAVIS_SECURE_ENV_VARS" == "true" ]]; then
     docker tag "pachyderm/worker:${version}" "pachyderm/worker:local"
 else
     make install
+    eval $(minikube docker-env)
     make docker-build
     # push pipeline build images
     pushd etc/pipeline-build
