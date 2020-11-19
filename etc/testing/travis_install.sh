@@ -80,3 +80,6 @@ fi
 
 # Install helm
 curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
+# Install pv
+sudo apt-get install pv
