@@ -46,7 +46,7 @@ if [[ "$TRAVIS_SECURE_ENV_VARS" == "true" ]]; then
     docker pull "pachyderm/worker:${version}"
     docker tag "pachyderm/worker:${version}" "pachyderm/worker:local"
 else
-    sudo apt-get install pv
+    travis_wait 30 sudo apt-get install pv
     make install
     make docker-build
     # push pipeline build images
