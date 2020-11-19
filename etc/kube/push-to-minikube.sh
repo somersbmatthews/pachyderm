@@ -9,7 +9,7 @@ fi
 # Detect if minikube was started with --vm-driver=none by inspecting the output
 # from 'minikube docker-env'
 if minikube docker-env \
-    | grep -q "'none' driver does not support 'minikube docker-env' command"
+    | grep "'none' driver does not support 'minikube docker-env' command"
 then
   exit 0 # Nothing to push -- vm-driver=none uses the system docker daemon
 fi
