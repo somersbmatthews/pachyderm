@@ -1,3 +1,40 @@
+Skip to content
+Search or jump to…
+
+Pull requests
+Issues
+Marketplace
+Explore
+ 
+@somersbmatthews 
+pachyderm
+/
+pachyderm
+161
+🔖 Custom notification settings
+Looking for a little more control? Now you can choose which types of activity you’d like to be notified about per repository.
+
+4.7k458
+Code
+Issues
+613
+Pull requests
+75
+Actions
+Projects
+7
+Wiki
+Security
+Insights
+pachyderm/etc/testing/travis_build_check_and_stash.sh
+@lukemarsden
+lukemarsden address review feedback - hopefully unbreak external contributions wh…
+…
+Latest commit 9bf5f66 on Jul 27
+ History
+ 1 contributor
+Executable File  87 lines (75 sloc)  3.36 KB
+ 
 #!/bin/bash
 
 set -ex
@@ -17,13 +54,8 @@ set -ex
 # So, try a few times to fetch and identify a valid version of the code. If we
 # time out, give up. If we succeed, stash that code in a docker image which
 # later tests can use to get it back.
-echo "This is GOPATH"
-echo ${GOPATH}
-cd ${GOPATH}/src
-ls
-cd github.com
-ls
-cd ${GOPATH}/src/github.com/somersbmatthews/pachyderm
+
+cd /home/travis/gopath/src/github.com/pachyderm/pachyderm
 
 if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
     # These shenannigans not needed for release and branch builds, hopefully.
