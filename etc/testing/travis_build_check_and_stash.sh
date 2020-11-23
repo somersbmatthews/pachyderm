@@ -17,8 +17,13 @@ set -ex
 # So, try a few times to fetch and identify a valid version of the code. If we
 # time out, give up. If we succeed, stash that code in a docker image which
 # later tests can use to get it back.
-
-cd /home/travis/gopath/src/github.com/pachyderm/pachyderm
+echo "This is GOPATH"
+echo ${GOPATH}
+cd ${GOPATH}/src
+ls
+cd github.com
+ls
+cd ${GOPATH}/src/github.com/somersbmatthews/pachyderm
 
 if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
     # These shenannigans not needed for release and branch builds, hopefully.
